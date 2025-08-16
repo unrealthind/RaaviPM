@@ -6,26 +6,26 @@
     <title>Loading Taskr Manager...</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- 
+      --- PRE-LOADING CRITICAL ASSETS ---
+      These tags instruct the browser to start downloading the necessary files for the next page
+      in the background while this loading page is visible. This makes the transition feel much faster.
+    -->
+    <link rel="preload" href="app.html" as="document">
+    <link rel="preload" href="app.js" as="script">
+    <link rel="preload" href="login.html" as="document">
+    <link rel="preload" href="login.js" as="script">
+
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            color: white;
-            text-align: center;
         }
-        .background-container { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100vh; 
-            background-size: 400% 400%; 
-            animation: gradientAnimation 15s ease infinite; 
-            z-index: -1; 
+        /* The gradient animation, same as the form loader */
+        .animated-gradient {
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
             background-image: linear-gradient(45deg, #4f46e5, #9333ea, #db2777, #f59e0b);
         }
         @keyframes gradientAnimation { 
@@ -33,44 +33,58 @@
             50% { background-position: 100% 50%; } 
             100% { background-position: 0% 50%; } 
         }
-        .loader {
-            font-size: 1.5rem;
-            font-weight: 500;
-        }
     </style>
 </head>
-<body>
-    <div class="background-container"></div>
-    <div class="loader">Loading Taskr Manager...</div>
+<body class="bg-gray-100">
+
+    <!-- 
+      Main container to center the loading box.
+      It uses Flexbox to position the content perfectly in the middle of the screen.
+    -->
+    <div class="flex items-center justify-center h-screen">
+        <!-- 
+          The main loading box with rounded corners and the animated gradient.
+        -->
+        <div class="w-full max-w-md h-48 rounded-2xl shadow-lg overflow-hidden">
+            <div class="w-full h-full animated-gradient"></div>
+        </div>
+    </div>
 
     <!-- Supabase and configuration scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Reference the env.js file from the root directory -->
+    <!-- 
+      NOTE: This 'env.js' script tag should be removed after you have moved your
+      keys into the 'utils.js' file to avoid errors and for cleaner code.
+    -->
     <script src="env.js"></script>
-    <!-- Reference the new shared utils script -->
     <script src="shared/utils.js"></script>
 
     <script>
-        // This script checks the user's session and redirects them.
         document.addEventListener('DOMContentLoaded', async () => {
-            // Wait a moment for Supabase to initialize, just in case.
-            await new Promise(resolve => setTimeout(resolve, 50));
+            const MIN_LOADING_TIME = 2000; // 2 seconds
+            const startTime = Date.now(); // Record the time when the script starts
 
             if (typeof _supabase === 'undefined') {
                 console.error("Supabase client is not initialized. Check env.js and shared/utils.js");
-                document.querySelector('.loader').textContent = 'Error: Could not connect to the server.';
                 return;
             }
 
+            // Perform the session check
             const { data: { session } } = await _supabase.auth.getSession();
             
-            if (session) {
-                // If the user is logged in, redirect to the main application.
-                window.location.replace('app.html');
-            } else {
-                // If the user is not logged in, redirect to the login page.
-                window.location.replace('login.html');
-            }
+            // Determine the destination URL
+            const destinationUrl = session ? 'app.html' : 'login.html';
+
+            // Calculate how much time has passed since the script started
+            const elapsedTime = Date.now() - startTime;
+            
+            // Calculate the remaining time needed to meet the minimum loading time
+            const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
+
+            // Set a timeout to redirect after the remaining time has passed
+            setTimeout(() => {
+                window.location.replace(destinationUrl);
+            }, remainingTime);
         });
     </script>
 </body>

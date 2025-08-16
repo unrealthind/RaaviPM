@@ -3,11 +3,11 @@
 // Security (RLS) and by restricting the Google API key to your specific domain.
 
 // Replace with your actual Supabase URL and public anon key
-const supabaseUrl = 'https://mevoynnthdyemlilzlxs.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldm95bm50aGR5ZW1saWx6bHhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyMTEzMzQsImV4cCI6MjA3MDc4NzMzNH0.NK6QkJb_i0UotsLX0ubkjw-4ZMqI3b7kljCRBjiagps';
+const supabaseUrl = 'https://xxx.supabase.co';
+const supabaseKey = 'xxx';
 
 // Replace with your actual Google Maps API Key
-const googleApiKey = 'AIzaSyAof8jhlreSU2LKhrtavlrbvyoJM-RDhhM';
+const googleApiKey = 'xxx';
 
 
 // --- 2. SUPABASE CLIENT INITIALIZATION ---

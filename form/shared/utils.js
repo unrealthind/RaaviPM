@@ -1,20 +1,25 @@
-// --- 1. SUPABASE CLIENT INITIALIZATION ---
-// This initializes the Supabase client for any application that includes this script.
-// It relies on env.js being loaded first.
+// --- 1. API KEYS & CONFIGURATION ---
+// These keys are safe to be public. Security is handled by Supabase's Row Level
+// Security (RLS) and by restricting the Google API key to your specific domain.
 
-let _supabase;
-if (window.APP_CONFIG) {
-    const { supabaseUrl, supabaseKey } = window.APP_CONFIG;
-    _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-    // Make it globally accessible for your app scripts
-    window._supabase = _supabase;
-} else {
-    console.error('Supabase configuration not found. Make sure env.js is loaded correctly.');
-}
+// Replace with your actual Supabase URL and public anon key
+const supabaseUrl = 'https://mevoynnthdyemlilzlxs.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldm95bm50aGR5ZW1saWx6bHhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyMTEzMzQsImV4cCI6MjA3MDc4NzMzNH0.NK6QkJb_i0UotsLX0ubkjw-4ZMqI3b7kljCRBjiagps';
+
+// Replace with your actual Google Maps API Key
+const googleApiKey = 'AIzaSyAof8jhlreSU2LKhrtavlrbvyoJM-RDhhM';
 
 
-// --- 2. UNIVERSAL THEME SWITCHER ---
-// This function can be called by any application to set up its theme switcher.
+// --- 2. SUPABASE CLIENT INITIALIZATION ---
+const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+// Make the Supabase client and Google API key globally accessible for app scripts
+window._supabase = _supabase;
+window.googleApiKey = googleApiKey; // The form/app.js needs this
+
+
+// --- 3. UNIVERSAL THEME SWITCHER ---
+// This function remains unchanged.
 
 function setupThemeSwitcher(buttonId, storageKey, themes = ['theme-rainbow', 'theme-dark-mono']) {
     const themeSwitcherBtn = document.getElementById(buttonId);

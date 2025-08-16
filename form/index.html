@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Inquiry Form...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 
+      --- PRE-LOADING CRITICAL ASSETS ---
+      These tags instruct the browser to start downloading the necessary files for the next page ('app.html')
+      in the background while this loading page is visible. This makes the transition feel much faster.
+    -->
+    <link rel="preload" href="app.js" as="script">
+    <link rel="preload" href="shared/utils.js" as="script">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" as="script">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style">
+
+
+    <style>
+        /* The gradient animation, same as your other pages */
+        .animated-gradient {
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
+            background-image: linear-gradient(45deg, #4f46e5, #9333ea, #db2777, #f59e0b);
+        }
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* New styles for our morphing animation.
+          We add transitions to the body for a smooth fade-out and to the
+          loader box for the scaling and opacity changes.
+        */
+        body {
+            transition: opacity 0.5s ease-in-out;
+        }
+        #loader-box {
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1); /* A smoother easing for the morph */
+        }
+    </style>
+</head>
+<body id="loader-body" class="bg-gray-50">
+
+    <div class="flex items-center justify-center h-screen">
+        <!-- 
+          The main loading box now has an ID so we can target it with JavaScript.
+          Its initial state is unchanged.
+        -->
+        <div id="loader-box" class="w-full max-w-md h-48 rounded-2xl shadow-lg overflow-hidden">
+            <div class="w-full h-full animated-gradient"></div>
+        </div>
+    </div>
+
+    <!-- Supabase and configuration scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="env.js"></script>
+    <script src="shared/utils.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Configuration ---
+            const START_ANIMATION_DELAY = 1500; // Wait 1.5 seconds before starting the animation
+            const REDIRECT_DELAY = 500;      // Wait 0.5s after animation starts to redirect
+
+            // --- DOM Elements ---
+            const loaderBox = document.getElementById('loader-box');
+            const body = document.getElementById('loader-body');
+
+            // The analytics and user-agent parsing functions remain the same.
+            const parseUserAgent = (ua) => {
+                let os = 'Unknown OS';
+                if (ua.indexOf('Win') !== -1) os = 'Windows';
+                if (ua.indexOf('Mac') !== -1) os = 'macOS';
+                if (ua.indexOf('Linux') !== -1) os = 'Linux';
+                if (ua.indexOf('Android') !== -1) os = 'Android';
+                if (ua.indexOf('like Mac') !== -1) os = 'iOS';
+
+                let browser = 'Unknown Browser';
+                if (ua.indexOf('Chrome') > -1 && ua.indexOf('Safari') > -1 && ua.indexOf('Edg') < 0) browser = 'Chrome';
+                if (ua.indexOf('Firefox') > -1) browser = 'Firefox';
+                if (ua.indexOf('Safari') > -1 && ua.indexOf('Chrome') < 0) browser = 'Safari';
+                if (ua.indexOf('Edg') > -1) browser = 'Edge';
+                
+                return { os, browser };
+            };
+
+            const trackVisit = async () => {
+                try {
+                    // --- Supabase IP Fetching (Commented out for local testing) ---
+                    /*
+                    if (typeof _supabase === 'undefined') {
+                        console.error("Supabase client not found. Cannot track visit.");
+                        return;
+                    }
+                    const { data: ipData, error: ipError } = await _supabase.functions.invoke('get-ip');
+                    if (ipError) console.error('Error fetching IP:', ipError.message);
+                    */
+                    
+                    // 1. Gather all device information.
+                    const userAgent = navigator.userAgent;
+                    const { os, browser } = parseUserAgent(userAgent);
+                    
+                    const visitData = {
+                        // Use a placeholder for the IP address during local testing.
+                        ip_address: '127.0.0.1 (local test)', 
+                        user_agent: userAgent,
+                        os: os,
+                        browser: browser,
+                        device_type: navigator.maxTouchPoints > 0 ? 'Mobile' : 'Desktop',
+                        screen_width: window.screen.width,
+                        screen_height: window.screen.height,
+                        referrer: document.referrer || 'Direct',
+                        timestamp: new Date().toISOString() // Add a timestamp for each visit
+                    };
+
+                    // --- Supabase Database Insert (Commented out for local testing) ---
+                    /*
+                    const { error: insertError } = await _supabase.from('form_visits').insert([visitData]);
+                    if (insertError) console.error('Error logging visit:', insertError.message);
+                    */
+
+                    // --- NEW: Local Storage Logic for Testing ---
+                    // 2. Get existing visits from localStorage, or create an empty array.
+                    const existingVisits = JSON.parse(localStorage.getItem('formVisits')) || [];
+                    
+                    // 3. Add the new visit data to the array.
+                    existingVisits.push(visitData);
+
+                    // 4. Save the updated array back to localStorage.
+                    localStorage.setItem('formVisits', JSON.stringify(existingVisits));
+
+                    // 5. Log to the console for immediate feedback during testing.
+                    console.log('Visit tracked and saved to localStorage:', visitData);
+                    console.log('All stored visits:', existingVisits);
+
+                } catch (error) {
+                    console.error('An unexpected error occurred during visit tracking:', error);
+                }
+            };
+
+            // --- Execution ---
+            
+            // 1. Track the visit in the background.
+            trackVisit();
+
+            // 2. Set a timer to begin the exit animation.
+            setTimeout(() => {
+                // Add classes to trigger the CSS transitions.
+                // The box will become larger, more rounded (like the target card), and fade slightly.
+                loaderBox.classList.add('scale-110', 'rounded-3xl', 'opacity-0');
+                // The whole page body will fade out.
+                body.classList.add('opacity-0');
+
+                // 3. Set another timer to redirect AFTER the animation has started.
+                // This ensures the user sees the start of the morph before the page changes.
+                setTimeout(() => {
+                    window.location.href = 'app.html';
+                }, REDIRECT_DELAY);
+
+            }, START_ANIMATION_DELAY);
+        });
+    </script>
+</body>
+</html>

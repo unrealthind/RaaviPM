@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = session.user;
 
     // --- DOM ELEMENTS ---
-    const loaderOverlay = document.getElementById('loader-overlay');
+    const appContent = document.getElementById('app-content'); // NEW: The main content wrapper
     const notificationContainer = document.getElementById('notification-container');
     const projectsView = document.getElementById('view-projects');
     const tasksView = document.getElementById('view-tasks');
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const editProjectModal = document.getElementById('edit-project-modal');
     const editProjectForm = document.getElementById('edit-project-form');
     const cancelEditProjectBtn = document.getElementById('cancel-edit-project-btn');
-    const deleteProjectBtn = document.getElementById('delete-project-btn'); // NEW
+    const deleteProjectBtn = document.getElementById('delete-project-btn');
     const editTaskModal = document.getElementById('edit-task-modal');
     const editTaskForm = document.getElementById('edit-task-form');
     const cancelEditTaskBtn = document.getElementById('cancel-edit-task-btn');
@@ -54,9 +54,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const clearProjectFiltersBtn = document.getElementById('clear-project-filters-btn');
 
     // --- UI FEEDBACK HELPERS ---
-    const showLoader = () => { loaderOverlay.style.display = 'flex'; };
-    const hideLoader = () => { loaderOverlay.style.display = 'none'; };
-
     const startButtonLoading = (button) => {
         button.disabled = true;
         button.dataset.originalText = button.innerHTML;
@@ -135,9 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return data[0];
         },
         
-        // NEW: Function to delete a project and its tasks
         async deleteProject(projectId) {
-            // Step 1: Delete all tasks associated with this project
             const { error: tasksError } = await _supabase
                 .from('tasks')
                 .delete()
@@ -149,7 +144,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return false;
             }
 
-            // Step 2: Delete the project itself
             const { error: projectError } = await _supabase
                 .from('projects')
                 .delete()
@@ -161,7 +155,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return false;
             }
 
-            // Step 3: Update local state
             this.projects = this.projects.filter(p => p.id !== Number(projectId));
             this.tasks = this.tasks.filter(t => t.project_id !== Number(projectId));
             
@@ -327,7 +320,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const handleDeleteNote = (e) => { const deleteButton = e.target.closest('.delete-note-btn'); if (!deleteButton) return; const noteElement = deleteButton.closest('[data-note-id]'); const noteId = Number(noteElement.dataset.noteId); const projectId = stateManager.currentProjectId; openConfirmationModal('Delete Note?', 'Are you sure you want to delete this note?', async () => { if (await stateManager.deleteNote(projectId, noteId)) { noteElement.remove(); } }); };
     const handleLogout = async () => { await _supabase.auth.signOut(); window.location.href = 'login.html'; };
     
-    // NEW: Handler for the delete project button
     const handleDeleteProject = async (e) => {
         e.preventDefault();
         const projectId = Number(document.getElementById('edit-project-id').value);
@@ -340,7 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const success = await stateManager.deleteProject(projectId);
                 if (success) {
                     closeEditProjectModal();
-                    switchView('projects'); // Go back to the main project list
+                    switchView('projects'); 
                 }
             }
         );
@@ -348,7 +340,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- INITIALIZATION ---
     const init = async () => {
-        showLoader();
         await stateManager.loadData();
         
         setupThemeSwitcher('theme-switcher', 'taskrTheme');
@@ -370,7 +361,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         notesListContainer.addEventListener('click', handleDeleteNote);
         editProjectForm.addEventListener('submit', handleUpdateProject);
         cancelEditProjectBtn.addEventListener('click', closeEditProjectModal);
-        deleteProjectBtn.addEventListener('click', handleDeleteProject); // NEW
+        deleteProjectBtn.addEventListener('click', handleDeleteProject);
         editTaskForm.addEventListener('submit', handleUpdateTask);
         cancelEditTaskBtn.addEventListener('click', closeEditTaskModal);
         filterProject.addEventListener('change', handleTaskFilterChange);
@@ -381,7 +372,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         filterProjectTasksDue.addEventListener('change', handleProjectFilterChange);
         clearProjectFiltersBtn.addEventListener('click', handleClearProjectFilters);
 
-        hideLoader();
+        // NEW: Fade in the main content
+        appContent.classList.remove('opacity-0');
     }
     
     init();
