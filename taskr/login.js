@@ -1,4 +1,16 @@
-// This script handles the login and signup functionality for the Taskr Manager.
+// This function will be called by the Turnstile script once it's loaded.
+// It uses the site key from utils.js to render the widget.
+function renderTurnstileWidget() {
+    // Check if the container element and the turnstile object are available
+    if (document.getElementById('turnstile-container') && typeof turnstile !== 'undefined') {
+        turnstile.render('#turnstile-container', {
+            sitekey: TURNSTILE_SITE_KEY, // This variable comes from utils.js
+            theme: 'dark', // Optional: 'light' or 'dark' to match your design
+        });
+    }
+}
+
+// This script handles the login and signup functionality.
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const loginForm = document.getElementById('login-form');
@@ -51,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (error) {
             showMessage(error.message, true);
         } else {
-            // On success, redirect to the main index file, which will route to the app.
+            // On success, redirect to the main index file.
             window.location.href = 'index.html'; 
         }
 
@@ -59,26 +71,67 @@ document.addEventListener('DOMContentLoaded', () => {
         loginButton.textContent = 'Login';
     });
 
-    // Handle the signup form submission
+    // Handle the signup form submission (Updated with Turnstile)
     signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Get values from all form fields
+        const name = document.getElementById('signup-name').value;
+        const company = document.getElementById('signup-company').value;
         const email = document.getElementById('signup-email').value;
         const password = document.getElementById('signup-password').value;
+        const confirmPassword = document.getElementById('signup-confirm-password').value;
         const signupButton = signupForm.querySelector('button');
+
+        // Get the Turnstile token from the form data
+        const formData = new FormData(signupForm);
+        const token = formData.get('cf-turnstile-response');
+
+        // --- Validation ---
+        if (password !== confirmPassword) {
+            showMessage("Passwords do not match.", true);
+            return;
+        }
+
+        if (!token) {
+            showMessage("Please complete the human verification check.", true);
+            return;
+        }
 
         signupButton.disabled = true;
         signupButton.textContent = 'Signing up...';
 
-        const { data, error } = await _supabase.auth.signUp({ email, password });
+        try {
+            // Call the 'signup' Supabase Edge Function
+            const { data, error } = await _supabase.functions.invoke('signup', {
+                body: {
+                    name,
+                    company,
+                    email,
+                    password,
+                    token, // Send the token for server-side verification
+                },
+            });
 
-        if (error) {
+            if (error) {
+                // If the edge function returns an error, show it
+                showMessage(error.message, true);
+            } else {
+                // Show the success message from the edge function
+                showMessage(data.message, false);
+                signupForm.reset();
+            }
+        } catch (error) {
+            // Catch any unexpected network errors
             showMessage(error.message, true);
-        } else {
-            showMessage('Success! Check your email for a confirmation link.', false);
-            signupForm.reset();
+        } finally {
+            // This block runs whether the try succeeds or fails
+            signupButton.disabled = false;
+            signupButton.textContent = 'Sign Up';
+            // Reset the Turnstile widget
+            if (typeof turnstile !== 'undefined') {
+                turnstile.reset();
+            }
         }
-
-        signupButton.disabled = false;
-        signupButton.textContent = 'Sign Up';
     });
 });

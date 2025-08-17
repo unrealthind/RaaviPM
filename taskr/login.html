@@ -55,7 +55,6 @@
     <div class="glass-container p-8 rounded-lg shadow-md w-full max-w-sm text-white">
         <h1 class="text-2xl font-bold mb-6 text-center">Taskr Manager</h1>
         
-        <!-- Login View -->
         <div id="auth-view">
             <form id="login-form" class="space-y-4">
                 <input type="email" id="email" placeholder="Email" class="w-full p-3 glass-input rounded focus:ring-indigo-500 focus:border-indigo-500" required>
@@ -67,11 +66,16 @@
             </p>
         </div>
 
-        <!-- Signup View -->
         <div id="signup-view" class="hidden">
             <form id="signup-form" class="space-y-4">
+                <input type="text" id="signup-name" placeholder="Full Name" class="w-full p-3 glass-input rounded focus:ring-indigo-500 focus:border-indigo-500" required>
+                <input type="text" id="signup-company" placeholder="Company Name" class="w-full p-3 glass-input rounded focus:ring-indigo-500 focus:border-indigo-500" required>
                 <input type="email" id="signup-email" placeholder="Email" class="w-full p-3 glass-input rounded focus:ring-indigo-500 focus:border-indigo-500" required>
                 <input type="password" id="signup-password" placeholder="Password" class="w-full p-3 glass-input rounded focus:ring-indigo-500 focus:border-indigo-500" required>
+                <input type="password" id="signup-confirm-password" placeholder="Confirm Password" class="w-full p-3 glass-input rounded focus:ring-indigo-500 focus:border-indigo-500" required>
+                
+                <div id="turnstile-container"></div>
+                
                 <button type="submit" class="w-full bg-white/90 text-indigo-700 font-bold py-3 rounded hover:bg-white transition-colors">Sign Up</button>
             </form>
             <p class="text-center text-gray-300 mt-4">
@@ -79,17 +83,14 @@
             </p>
         </div>
 
-        <!-- Message/Error Container -->
         <p id="message-container" class="text-center mt-4 font-medium"></p>
     </div>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Reference the env.js file from the root directory -->
     <script src="env.js"></script>
-    <!-- Reference the new shared utils script -->
     <script src="shared/utils.js"></script>
-    <!-- Login Logic -->
     <script src="login.js"></script>
+
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=renderTurnstileWidget" async defer></script>
 </body>
 </html>

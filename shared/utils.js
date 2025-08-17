@@ -9,6 +9,8 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 // Replace with your actual Google Maps API Key
 const googleApiKey = 'AIzaSyAof8jhlreSU2LKhrtavlrbvyoJM-RDhhM';
 
+const TURNSTILE_SITE_KEY = '0x4AAAAAABsZyrCJrxVV9LtQ';
+
 
 // --- 2. SUPABASE CLIENT INITIALIZATION ---
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);

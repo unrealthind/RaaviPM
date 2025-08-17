@@ -221,6 +221,8 @@ FOR DELETE USING (auth.uid() = user_id);
 
 
 6. Deployment
+
+(Running as a Service)
 Since you have two separate front-end applications, you will need to deploy them individually.
 
 Choose a Host: Use a static site hosting service like Netlify, Vercel, or GitHub Pages.
