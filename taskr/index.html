@@ -52,11 +52,6 @@
 
     <!-- Supabase and configuration scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- 
-      NOTE: This 'env.js' script tag should be removed after you have moved your
-      keys into the 'utils.js' file to avoid errors and for cleaner code.
-    -->
-    <script src="env.js"></script>
     <script src="shared/utils.js"></script>
 
     <script>
@@ -65,7 +60,7 @@
             const startTime = Date.now(); // Record the time when the script starts
 
             if (typeof _supabase === 'undefined') {
-                console.error("Supabase client is not initialized. Check env.js and shared/utils.js");
+                console.error("Supabase client is not initialized. Check shared/utils.js and shared/utils.js");
                 return;
             }
 
