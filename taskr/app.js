@@ -58,6 +58,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cancelConfirmationBtn = document.getElementById('cancel-confirmation-btn');
     const confirmActionBtn = document.getElementById('confirm-action-btn');
 
+    // Address inputs and controls for Projects
+    const addProjectAddressInput = document.getElementById('project-address');
+    const addProjectAddressManual = document.getElementById('project-address-manual');
+    const addShowMapsBtn = document.getElementById('add-show-maps-btn');
+    const editProjectAddressInput = document.getElementById('edit-project-address');
+    const editProjectAddressManual = document.getElementById('edit-project-address-manual');
+    const editShowMapsBtn = document.getElementById('edit-show-maps-btn');
+
     // Filters & Dropdowns
     const taskProjectSelect = document.getElementById('task-project-select');
     const filterProject = document.getElementById('filter-project');
@@ -265,7 +273,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         projectTypeDetail.textContent = project.project_type || 'N/A';
         projectCategoryDetail.textContent = project.project_category || 'N/A';
         servicesRequiredDetail.textContent = project.services_required || 'N/A';
-        projectAreaDetail.textContent = `${project.project_area || '0'} ${project.area_unit || ''}`;
+        // Render area with nice unit (ft²/m²)
+        const unitNice = project.area_unit === 'sq ft' ? 'ft²' : (project.area_unit === 'sq m' ? 'm²' : (project.area_unit || ''));
+        projectAreaDetail.innerHTML = `${project.project_area || '0'} ${unitNice}`;
         possessionDateDetail.textContent = project.possession_date ? new Date(project.possession_date).toLocaleDateString() : 'N/A';
         initialNoteDetail.textContent = (project.notes && project.notes.length > 0 && project.notes[0].text) || 'No initial notes were provided.';
         renderTasks(singleProjectTaskList, stateManager.getTasksForProject(projectId), singleProjectNoTasksMessage);
@@ -326,6 +336,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             address: document.getElementById('project-address').value.trim(),
             status: document.getElementById('project-status').value,
             value: document.getElementById('project-value').value || null,
+            project_area: document.getElementById('project-area')?.value || null,
+            area_unit: document.getElementById('area-unit')?.value || null,
+            project_type: document.getElementById('project-type')?.value || null,
+            project_category: document.getElementById('project-category')?.value || null,
+            services_required: document.getElementById('services-required')?.value || null,
             client_phone: document.getElementById('project-client-phone').value.trim(),
             client_email: document.getElementById('project-client-email').value.trim(),
             notes: document.getElementById('project-notes').value.trim() ? [{ id: Date.now(), text: document.getElementById('project-notes').value.trim(), author: user.email, timestamp: new Date().toISOString() }] : [],
@@ -368,6 +383,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         editProjectForm.querySelector('#edit-project-value').value = project.value || '';
         editProjectForm.querySelector('#edit-project-client-phone').value = project.client_phone || '';
         editProjectForm.querySelector('#edit-project-client-email').value = project.client_email || '';
+        // Ensure category options match the type before setting values
+        populateCategorySelect(document.getElementById('edit-project-category'), project.project_type);
         editProjectForm.querySelector('#edit-project-type').value = project.project_type || '';
         editProjectForm.querySelector('#edit-project-category').value = project.project_category || '';
         editProjectForm.querySelector('#edit-services-required').value = project.services_required || '';
@@ -385,6 +402,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         editTaskForm.querySelector('#edit-task-due-time').value = task.due_time || '';
         editTaskForm.querySelector('#edit-task-priority').value = task.priority;
         openModal(editTaskModal);
+    };
+
+    // --- Google Places Autocomplete (Project address fields) ---
+    const addressAutocompletes = {};
+    const attachAddressAutocomplete = (inputEl, manualCheckboxEl) => {
+        if (!inputEl || typeof google === 'undefined' || !google.maps?.places) return;
+        const edmonton = { lat: 53.5461, lng: -113.4938 };
+        const edmontonBounds = new google.maps.LatLngBounds(
+            { lat: 53.25, lng: -113.80 },
+            { lat: 53.75, lng: -113.20 }
+        );
+        const ac = new google.maps.places.Autocomplete(inputEl, {
+            fields: ["geometry", "formatted_address", "place_id"],
+            types: ["geocode"],
+            bounds: edmontonBounds,
+            strictBounds: false,
+            origin: edmonton,
+            componentRestrictions: { country: 'ca' }
+        });
+        const handler = () => {
+            if (manualCheckboxEl && manualCheckboxEl.checked) return; // Manual override
+            const place = ac.getPlace();
+            if (place && place.formatted_address) {
+                inputEl.value = place.formatted_address;
+            }
+        };
+        ac.addListener('place_changed', handler);
+        addressAutocompletes[inputEl.id] = { ac };
+    };
+    function loadGooglePlacesForProjects() {
+        if (!window.googleApiKey) return;
+        if (window.google && window.google.maps && window.google.maps.places) {
+            attachAddressAutocomplete(addProjectAddressInput, addProjectAddressManual);
+            attachAddressAutocomplete(editProjectAddressInput, editProjectAddressManual);
+            return;
+        }
+        window.initProjectAutocomplete = () => {
+            attachAddressAutocomplete(addProjectAddressInput, addProjectAddressManual);
+            attachAddressAutocomplete(editProjectAddressInput, editProjectAddressManual);
+        };
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${window.googleApiKey}&libraries=places&loading=async&callback=initProjectAutocomplete`;
+        script.async = true;
+        document.head.appendChild(script);
+    }
+    const openInGoogleMaps = (addressText) => {
+        const address = (addressText || '').trim();
+        if (!address) return;
+        const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+        window.open(url, '_blank');
+    };
+
+    // --- Project Type/Category Options (from the public form) ---
+    const CATEGORY_OPTIONS = {
+        Commercial: [
+            'Daycare/Childcare', 'Healthcare', 'Retail', 'Warehouse', 'Office', 'Restaurant', 'Other'
+        ],
+        Residential: [
+            'Basement Development', 'Basement Window/Door Add', 'Garage/Garage Suite', 'Renovation', 'Additions', 'New Build'
+        ],
+        Rezoning: [
+            'Residential to Commercial', 'Commercial Rezoning', 'Other'
+        ]
+    };
+    const populateCategorySelect = (selectEl, typeValue, selectedValue = '') => {
+        if (!selectEl) return;
+        const opts = CATEGORY_OPTIONS[typeValue] || [];
+        selectEl.innerHTML = '<option value="">Project Category</option>' + opts.map(o => `<option value="${o}">${o}</option>`).join('');
+        if (selectedValue) selectEl.value = selectedValue;
     };
 
     // --- INITIALIZATION ---
@@ -425,6 +511,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearFiltersBtn.addEventListener('click', () => { [filterProject, filterPriority, filterDate].forEach(el => el.value = 'all'); renderTasks(taskList, getFilteredTasks(), noTasksMessage); });
         [filterProjectStatus, filterProjectTasksDue].forEach(el => el.addEventListener('change', renderProjects));
         clearProjectFiltersBtn.addEventListener('click', () => { [filterProjectStatus, filterProjectTasksDue].forEach(el => el.value = 'all'); renderProjects(); });
+
+        // Address: Show on Maps handlers
+        if (addShowMapsBtn) addShowMapsBtn.addEventListener('click', () => openInGoogleMaps(addProjectAddressInput?.value));
+        if (editShowMapsBtn) editShowMapsBtn.addEventListener('click', () => openInGoogleMaps(editProjectAddressInput?.value));
+
+        // Load Google Places for address inputs
+        loadGooglePlacesForProjects();
+
+        // Project Type -> Category dependency
+        const addTypeEl = document.getElementById('project-type');
+        const addCatEl = document.getElementById('project-category');
+        if (addTypeEl && addCatEl) {
+            addTypeEl.addEventListener('change', () => populateCategorySelect(addCatEl, addTypeEl.value));
+            // initialize placeholder/options on load
+            populateCategorySelect(addCatEl, addTypeEl.value);
+        }
+        const editTypeEl = document.getElementById('edit-project-type');
+        const editCatEl = document.getElementById('edit-project-category');
+        if (editTypeEl && editCatEl) {
+            editTypeEl.addEventListener('change', () => populateCategorySelect(editCatEl, editTypeEl.value));
+        }
 
         // This is the final step: make the app visible after everything is loaded.
         appContent.classList.remove('opacity-0');

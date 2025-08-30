@@ -1,13 +1,13 @@
-// --- Google Maps API Loader (MOVED HERE) ---
-// This code now runs after env.js is loaded, ensuring window.APP_CONFIG exists.
-if (window.APP_CONFIG && window.APP_CONFIG.googleApiKey) {
+// --- Google Maps API Loader (callback-based, with loading=async) ---
+// utils.js sets window.googleApiKey; load Maps only if it exists.
+if (window.googleApiKey) {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${window.APP_CONFIG.googleApiKey}&libraries=places&callback=initAutocomplete`;
+    // Use loading=async to follow Google best-practice, still using callback for stability
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${window.googleApiKey}&libraries=places&loading=async&callback=initAutocomplete`;
     script.async = true;
     document.head.appendChild(script);
 } else {
-    console.error("Google API Key not found in env.js. Map functionality will be disabled.");
-    // Optionally, disable the map-related step or show a message to the user
+    console.error("Google API key not found. Ensure shared/utils.js defines window.googleApiKey.");
 }
 
 // --- Google Maps Initialization ---
@@ -15,60 +15,70 @@ let map, marker, geocoder;
 async function initAutocomplete() {
     const addressInput = document.getElementById("project-address");
     if (!addressInput) return;
-
     const edmonton = { lat: 53.5461, lng: -113.4938 };
+    // Bias Autocomplete toward Edmonton (not strict). Also bias geocoding to CA.
+    const edmontonBounds = new google.maps.LatLngBounds(
+        { lat: 53.25, lng: -113.80 }, // SW approx
+        { lat: 53.75, lng: -113.20 }  // NE approx
+    );
     map = new google.maps.Map(document.getElementById("map"), {
         center: edmonton,
         zoom: 11,
         mapId: "RAAVI_MAP_ID",
         mapTypeControl: false
     });
-
-    const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-    const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
-    
     geocoder = new google.maps.Geocoder();
 
-    // --- UPDATED TO USE PlaceAutocompleteElement ---
-    const autocompleteElement = new PlaceAutocompleteElement();
-    // Style the new element to match the form's aesthetic
-    autocompleteElement.className = 'glass-input mt-1 block w-full rounded-md shadow-sm h-10';
-    
-    // Replace the original input with the new web component
-    addressInput.replaceWith(autocompleteElement);
-
-    // Create a hidden input to store the address for form submission
-    const hiddenAddressInput = document.createElement('input');
-    hiddenAddressInput.type = 'hidden';
-    hiddenAddressInput.name = 'project-address';
-    document.getElementById('intake-form').appendChild(hiddenAddressInput);
-
-    autocompleteElement.addEventListener('gmp-placeselect', (event) => {
-        const place = event.place;
-        if (place.geometry && place.geometry.location) {
-            map.setCenter(place.geometry.location);
+    // --- Use classic Places Autocomplete on the existing input ---
+    const autocomplete = new google.maps.places.Autocomplete(addressInput, {
+        fields: ["geometry", "formatted_address", "place_id"],
+        types: ["geocode"],
+        bounds: edmontonBounds,          // prefer Edmonton area
+        strictBounds: false,             // allow outside results but bias toward bounds
+        origin: edmonton,                // distance bias
+        componentRestrictions: { country: 'ca' } // bias to Canada
+    });
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        const setFromLocation = (loc, addrText) => {
+            if (!loc) return;
+            map.setCenter(loc);
             map.setZoom(17);
-            placeMarker(place.geometry.location, AdvancedMarkerElement);
-            // Update the hidden input's value for the form
-            hiddenAddressInput.value = place.formattedAddress;
+            placeMarker(loc);
+            if (addrText) addressInput.value = addrText;
+        };
+        if (place && place.geometry && place.geometry.location) {
+            setFromLocation(place.geometry.location, place.formatted_address);
+        } else if (place && place.place_id) {
+            geocoder.geocode({ placeId: place.place_id }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                    setFromLocation(results[0].geometry.location, results[0].formatted_address);
+                }
+            });
+        } else if (addressInput.value) {
+            geocoder.geocode({ address: addressInput.value, region: 'ca', bounds: edmontonBounds }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                    setFromLocation(results[0].geometry.location, results[0].formatted_address);
+                }
+            });
         }
     });
     // --- END OF UPDATE ---
 
     map.addListener("click", (e) => {
-        placeMarker(e.latLng, AdvancedMarkerElement);
+        placeMarker(e.latLng);
         geocoder.geocode({ location: e.latLng }, (results, status) => {
             if (status === "OK" && results[0]) {
-                // When clicking the map, update both the UI element and the hidden input
-                autocompleteElement.value = results[0].formatted_address;
-                hiddenAddressInput.value = results[0].formatted_address;
+                // When clicking the map, update the visible autocomplete input
+                const addr = results[0].formatted_address;
+                addressInput.value = addr;
             }
         });
     });
 }
-function placeMarker(position, AdvancedMarkerElement) {
-    if (marker) { marker.position = null; }
-    marker = new AdvancedMarkerElement({ position, map });
+function placeMarker(position) {
+    if (marker) { marker.setMap(null); }
+    marker = new google.maps.Marker({ position, map });
 }
 
 // --- App Logic ---
@@ -168,11 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (!email.value.match(emailRegex)) { showError(email, 'INVALID FORMAT'); isValid = false; }
         }
         if (stepIndex === 1) {
-            // The hidden input now holds the value for validation
-            const address = document.querySelector('input[name="project-address"]');
-            if (!address.value.trim()) { 
-                // Show error on the visible autocomplete element
-                showError(document.querySelector('gmp-place-autocomplete'), 'REQUIRED'); 
+            const addressField = document.getElementById('project-address');
+            if (!addressField.value.trim()) { 
+                showError(addressField, 'REQUIRED'); 
                 isValid = false; 
             }
         }
